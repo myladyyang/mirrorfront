@@ -23,19 +23,9 @@ import {
   PromptInputTextarea,
   PromptInputFooter,
   PromptInputTools,
-  PromptInputActionMenu,
-  PromptInputActionMenuTrigger,
-  PromptInputActionMenuContent,
-  PromptInputActionAddAttachments,
   PromptInputButton,
-  PromptInputModelSelect,
-  PromptInputModelSelectTrigger,
-  PromptInputModelSelectValue,
-  PromptInputModelSelectContent,
-  PromptInputModelSelectItem,
   PromptInputSubmit,
   type PromptInputMessage,
-  PromptInputSpeechButton,
 } from '@/components/ai-elements/prompt-input';
 import { Sources, SourcesTrigger, SourcesContent, Source } from '@/components/ai-elements/sources';
 import { Reasoning, ReasoningTrigger, ReasoningContent } from '@/components/ai-elements/reasoning';
@@ -57,6 +47,14 @@ export default function Home() {
 
   const [playError, setPlayError] = useState<string | null>(null);
   const [playStep, setPlayStep] = useState<string>("idle");
+
+  type SourceUrlPart = { type: 'source-url'; url: string };
+  type TextPart = { type: 'text'; text: string };
+  type ReasoningPart = { type: 'reasoning'; text: string };
+  type Part = SourceUrlPart | TextPart | ReasoningPart;
+
+  const isSourceUrlPart = (p: Part): p is SourceUrlPart => p.type === 'source-url';
+  // helpers for future use (text/reasoning)
 
   const stopPlayback = useCallback(() => {
     setIsPlaying(false);
@@ -112,7 +110,11 @@ export default function Home() {
         videoRef.current.srcObject = stream;
       }
 
-      if (pc.connectionState === "closed") return; // 防御：避免在已关闭连接上继续
+      {
+        const cs = String(pc.connectionState);
+        const ics = String(pc.iceConnectionState);
+        if (cs === "failed" || cs === "disconnected" || ics === "closed" || ics === "failed" || ics === "disconnected") return; // 防御：失败/断开/关闭时中止
+      }
       console.debug("[WHEP] addTransceiver(audio, recvonly)");
       pc.addTransceiver("audio", { direction: "recvonly" });
       console.debug("[WHEP] addTransceiver(video, recvonly)");
@@ -135,7 +137,11 @@ export default function Home() {
 
       const offer = await pc.createOffer();
       console.debug("[WHEP] created offer, sdp length:", offer.sdp?.length ?? 0);
-      if (pc.connectionState === "closed") return;
+      {
+        const cs = String(pc.connectionState);
+        const ics = String(pc.iceConnectionState);
+        if (cs === "failed" || cs === "disconnected" || ics === "closed" || ics === "failed" || ics === "disconnected") return;
+      }
       await pc.setLocalDescription(offer);
       console.debug("[WHEP] setLocalDescription ok");
       setPlayStep("offer-sent");
@@ -159,7 +165,11 @@ export default function Home() {
       if (!resp.ok) throw new Error(`WHEP failed: ${resp.status}`);
       const answerSdp = await resp.text();
       console.debug("[WHEP] received answer, sdp length:", answerSdp.length);
-      if (pcRef.current !== pc || pc.connectionState === "closed") return; // 已被停止或替换
+      {
+        const cs = String(pc.connectionState);
+        const ics = String(pc.iceConnectionState);
+        if (pcRef.current !== pc || cs === "failed" || cs === "disconnected" || ics === "closed" || ics === "failed" || ics === "disconnected") return; // 已被停止或替换
+      }
       await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
       console.debug("[WHEP] setRemoteDescription ok");
       setPlayStep("answer-applied");
@@ -215,7 +225,7 @@ export default function Home() {
       {/* Main Content */}
       <div className={`h-full flex flex-col transition-opacity duration-1000 ${showWelcome ? 'opacity-0' : 'opacity-100'}`}>
       {/* WHEP 播放器 */}
-      <div className="flex-shrink-0 flex-1 relative w-full group max-w-md mx-auto sm:max-w-lg md:max-w-xl lg:max-w-2xl">
+      <div className="shrink-0 flex-1 relative w-full group max-w-md mx-auto sm:max-w-lg md:max-w-xl lg:max-w-2xl">
         <video
           ref={videoRef}
           className="w-full h-full bg-black object-cover"
@@ -242,6 +252,12 @@ export default function Home() {
             <div className="text-white text-base sm:text-lg">连接中...</div>
           </div>
         )}
+
+        {/* Step/Error HUD */}
+        <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-1 pointer-events-none">
+          <div className="text-[11px] text-white/80">step: {playStep}</div>
+          {playError && <div className="text-[11px] text-red-400">error: {playError}</div>}
+        </div>
       </div>
 
   
@@ -267,27 +283,27 @@ export default function Home() {
                 <ConversationContent>
                   {messages.map((message, mIdx) => (
                     <div key={message.id}>
-                      {message.role === 'assistant' && message.parts.filter((p: any) => p.type === 'source-url').length > 0 && (
+                      {message.role === 'assistant' && (message.parts as unknown as Part[]).filter(isSourceUrlPart).length > 0 && (
                         <Sources>
                           <SourcesTrigger
-                            count={message.parts.filter((p: any) => p.type === 'source-url').length}
+                            count={(message.parts as unknown as Part[]).filter(isSourceUrlPart).length}
                           />
-                          {message.parts.filter((p: any) => p.type === 'source-url').map((part: any, i: number) => (
+                          {(message.parts as unknown as Part[]).filter(isSourceUrlPart).map((part, i: number) => (
                             <SourcesContent key={`${message.id}-${i}`}>
-                              <Source href={part.url} title={part.url} />
+                              <Source href={(part as SourceUrlPart).url} title={(part as SourceUrlPart).url} />
                             </SourcesContent>
                           ))}
                         </Sources>
                       )}
 
-                      {message.parts.map((part: any, i: number) => {
+                      {(message.parts as unknown as Part[]).map((part, i: number) => {
                         switch (part.type) {
                           case 'text':
                             return (
                               <div key={`${message.id}-${i}`}>
                                 <Message from={message.role}>
                                   <MessageContent>
-                                    <Response>{part.text}</Response>
+                                    <Response>{(part as TextPart).text}</Response>
                                   </MessageContent>
                                 </Message>
                                 {message.role === 'assistant' && mIdx === messages.length - 1 && (
@@ -295,7 +311,7 @@ export default function Home() {
                                     <Action onClick={() => regenerate()} label="Retry">
                                       <RefreshCcw className="size-3" />
                                     </Action>
-                                    <Action onClick={() => navigator.clipboard.writeText(part.text)} label="Copy">
+                                    <Action onClick={() => navigator.clipboard.writeText((part as TextPart).text)} label="Copy">
                                       <CopyIcon className="size-3" />
                                     </Action>
                                   </Actions>
@@ -310,7 +326,7 @@ export default function Home() {
                                 isStreaming={status === 'streaming' && i === message.parts.length - 1 && message.id === messages.at(-1)?.id}
                               >
                                 <ReasoningTrigger />
-                                <ReasoningContent>{part.text}</ReasoningContent>
+                                <ReasoningContent>{(part as ReasoningPart).text}</ReasoningContent>
                               </Reasoning>
                             );
                           default:
@@ -330,7 +346,7 @@ export default function Home() {
       )}
 
       {/* Prompt Input */}
-      <div className="flex-shrink-0 p-3 sm:p-4">
+      <div className="shrink-0 p-3 sm:p-4">
         <div className="max-w-md mx-auto sm:max-w-lg md:max-w-xl lg:max-w-2xl">
           <PromptInput onSubmit={handleSubmit} className="w-full" globalDrop multiple>
             <PromptInputHeader>
@@ -339,8 +355,7 @@ export default function Home() {
               </PromptInputAttachments>
             </PromptInputHeader>
             <PromptInputBody>
-              
-              <PromptInputTextarea onChange={(e: any) => setInput(e.target.value)} value={input} placeholder="你好，让我们开始对话吧!" />
+              <PromptInputTextarea onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value)} value={input} placeholder="你好，让我们开始对话吧!" />
             </PromptInputBody>
             <PromptInputFooter>
               <PromptInputTools>
