@@ -47,6 +47,9 @@ importers:
       '@radix-ui/react-use-controllable-state':
         specifier: ^1.2.2
         version: 1.2.2(@types/react@19.2.2)(react@19.1.0)
+      '@types/hast':
+        specifier: ^3.0.4
+        version: 3.0.4
       '@xyflow/react':
         specifier: ^12.9.1
         version: 12.9.1(@types/react@19.2.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -54,7 +57,7 @@ importers:
         specifier: ^5.0.82
         version: 5.0.82(zod@4.1.12)
       ai-elements:
-        specifier: ^1.5.0
+        specifier: ^1.1.2
         version: 1.5.0
       class-variance-authority:
         specifier: ^0.7.1
@@ -68,6 +71,9 @@ importers:
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@19.1.0)
+      hast:
+        specifier: ^1.0.0
+        version: 1.0.0
       ioredis:
         specifier: ^5.8.2
         version: 5.8.2
@@ -2277,6 +2283,10 @@ packages:
 
   hast-util-whitespace@3.0.0:
     resolution: {integrity: sha512-88JUN06ipLwsnv+dVn+OIYOvAuvBMy/Qoi6O7mQHxdPXpjy+Cd6xRkWwux7DKO+4sYILtLBRIKgsdpS2gQc7qw==}
+
+  hast@1.0.0:
+    resolution: {integrity: sha512-vFUqlRV5C+xqP76Wwq2SrM0kipnmpxJm7OfvVXpB35Fp+Fn4MV+ozr+JZr5qFvyR1q/U+Foim2x+3P+x9S1PLA==}
+    deprecated: Renamed to rehype
 
   hastscript@9.0.1:
     resolution: {integrity: sha512-g7df9rMFX/SPi34tyGCyUBREQoKkapwdY/T04Qn9TDWfHhAYt4/I0gMVirzK5wEzeUqIjEB+LXC/ypb7Aqno5w==}
@@ -6029,6 +6039,8 @@ snapshots:
   hast-util-whitespace@3.0.0:
     dependencies:
       '@types/hast': 3.0.4
+
+  hast@1.0.0: {}
 
   hastscript@9.0.1:
     dependencies:
