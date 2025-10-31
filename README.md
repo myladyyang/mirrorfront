@@ -29,10 +29,10 @@ Create `.env.local` at project root:
 
 ```
 DEEPSEEK_API_KEY=your_deepseek_key
-REDIS_HOST=42.193.18.244
+REDIS_HOST=xxxx
 REDIS_PORT=6379
 REDIS_DB=0
-REDIS_PASSWORD=QString01
+REDIS_PASSWORD=xxxx
 REDIS_CHANNEL=message_channel
 ```
 
